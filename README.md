@@ -7,6 +7,15 @@ An MCP server for Unraid, exposing Unraid data to Claude via the Unraid GraphQL 
 ### `get-parity-status`
 Returns the current parity check status for the Unraid array, including progress percentage, speed, duration, error count, and whether it is running, paused, or correcting.
 
+### `get-array-status`
+Returns the array state (started/stopped), total capacity with used/free in TiB, and a per-disk summary including device name, type, status, usage in GiB, and temperature.
+
+### `get-disk-health`
+Returns SMART status, temperature, interface type (SAS/SATA/PCIE/USB), and spin state for all physical disks attached to the server.
+
+### `get-parity-history`
+Returns recent parity check history. Accepts an optional `limit` parameter (1–50, default 10). Each entry shows date, status (COMPLETED/CANCELLED), duration, speed, and error count.
+
 ## Requirements
 
 - Unraid 7.x with API enabled
