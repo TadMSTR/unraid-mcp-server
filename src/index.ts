@@ -36,7 +36,7 @@ async function graphql(query: string): Promise<unknown> {
 
 const server = new McpServer({
   name: "unraid-mcp-server",
-  version: "0.1.0",
+  version: "0.2.0",
 });
 
 server.tool(
@@ -194,6 +194,51 @@ server.tool(
       const date = new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
       const errors = entry.errors > 0 ? ` ⚠ ${entry.errors} errors` : "";
       lines.push(`  ${date} | ${entry.status} | ${formatDuration(entry.duration)} | ${formatSpeed(entry.speed, entry.duration)}${errors}`);
+    }
+
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "get-notifications",
+  "Get Unraid notifications. Returns unread count summary and a list of recent notifications. Optionally fetch archived notifications instead of unread.",
+  {
+    type: z.enum(["UNREAD", "ARCHIVE"]).default("UNREAD").describe("Whether to fetch unread or archived notifications"),
+    limit: z.number().min(1).max(50).default(10).describe("Number of notifications to return"),
+  },
+  async ({ type, limit }) => {
+    const data = (await graphql(`{
+      notifications {
+        overview { unread { alert warning info total } }
+        list(filter: { type: ${type}, offset: 0, limit: ${limit} }) {
+          title subject description importance formattedTimestamp
+        }
+      }
+    }`)) as {
+      notifications: {
+        overview: { unread: { alert: number; warning: number; info: number; total: number } };
+        list: { title: string; subject: string; description: string; importance: string; formattedTimestamp: string }[];
+      };
+    };
+
+    const { overview, list } = data.notifications;
+    const u = overview.unread;
+
+    const lines: string[] = [
+      `Unread: ${u.total} total (${u.alert} alerts, ${u.warning} warnings, ${u.info} info)`,
+      "",
+      `${type} notifications (${list.length}):`,
+    ];
+
+    if (list.length === 0) {
+      lines.push("  None.");
+    } else {
+      for (const n of list) {
+        const icon = n.importance === "ALERT" ? "🔴" : n.importance === "WARNING" ? "🟡" : "🔵";
+        lines.push(`  ${icon} [${n.formattedTimestamp}] ${n.subject}`);
+        if (n.description) lines.push(`     ${n.description}`);
+      }
     }
 
     return { content: [{ type: "text", text: lines.join("\n") }] };

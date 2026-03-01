@@ -16,6 +16,9 @@ Returns SMART status, temperature, interface type (SAS/SATA/PCIE/USB), and spin 
 ### `get-parity-history`
 Returns recent parity check history. Accepts an optional `limit` parameter (1–50, default 10). Each entry shows date, status (COMPLETED/CANCELLED), duration, speed, and error count.
 
+### `get-notifications`
+Returns unread notification count summary (alerts, warnings, info) and a list of recent notifications. Accepts optional `type` (UNREAD or ARCHIVE, default UNREAD) and `limit` (1–50, default 10) parameters.
+
 ## Requirements
 
 - Unraid 7.x with API enabled
