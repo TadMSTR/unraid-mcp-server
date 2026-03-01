@@ -36,7 +36,7 @@ async function graphql(query: string): Promise<unknown> {
 
 const server = new McpServer({
   name: "unraid-mcp-server",
-  version: "0.2.0",
+  version: "0.3.0",
 });
 
 server.tool(
@@ -239,6 +239,88 @@ server.tool(
         lines.push(`  ${icon} [${n.formattedTimestamp}] ${n.subject}`);
         if (n.description) lines.push(`     ${n.description}`);
       }
+    }
+
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "get-system-info",
+  "Get Unraid system information including hostname, uptime, OS version, CPU, RAM, and Unraid/kernel versions.",
+  {},
+  async () => {
+    const data = (await graphql(`{
+      info {
+        os { hostname uptime platform distro release }
+        cpu { manufacturer brand cores threads }
+        memory { layout { size type } }
+        versions { core { unraid kernel } }
+      }
+    }`)) as {
+      info: {
+        os: { hostname: string; uptime: string; platform: string; distro: string; release: string };
+        cpu: { manufacturer: string; brand: string; cores: number; threads: number };
+        memory: { layout: { size: number; type: string }[] };
+        versions: { core: { unraid: string; kernel: string } };
+      };
+    };
+
+    const { os, cpu, memory, versions } = data.info;
+
+    const uptimeDate = new Date(os.uptime);
+    const uptimeSecs = Math.floor((Date.now() - uptimeDate.getTime()) / 1000);
+    const uptimeDays = Math.floor(uptimeSecs / 86400);
+    const uptimeHours = Math.floor((uptimeSecs % 86400) / 3600);
+    const uptimeMins = Math.floor((uptimeSecs % 3600) / 60);
+    const uptimeStr = uptimeDays > 0
+      ? `${uptimeDays}d ${uptimeHours}h ${uptimeMins}m`
+      : `${uptimeHours}h ${uptimeMins}m`;
+
+    const ramTotalGiB = (memory.layout.reduce((sum, m) => sum + m.size, 0) / 1024 / 1024 / 1024).toFixed(0);
+    const ramType = memory.layout[0]?.type ?? "Unknown";
+
+    const lines = [
+      `Hostname: ${os.hostname}`,
+      `Uptime: ${uptimeStr}`,
+      `OS: ${os.distro} ${os.release}`,
+      `Unraid: ${versions.core.unraid}`,
+      `Kernel: ${versions.core.kernel}`,
+      `CPU: ${cpu.manufacturer} ${cpu.brand} (${cpu.cores} cores / ${cpu.threads} threads)`,
+      `RAM: ${ramTotalGiB} GiB ${ramType} (${memory.layout.length} DIMMs)`,
+    ];
+
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "get-docker-containers",
+  "Get Docker container list with name, state, status, and image. Optionally filter to running containers only.",
+  {
+    runningOnly: z.boolean().default(false).describe("If true, only return running containers"),
+  },
+  async ({ runningOnly }) => {
+    const data = (await graphql(`{
+      docker { containers { names state status image } }
+    }`)) as {
+      docker: {
+        containers: { names: string[]; state: string; status: string; image: string }[];
+      };
+    };
+
+    let containers = data.docker.containers;
+    if (runningOnly) containers = containers.filter((c) => c.state === "RUNNING");
+
+    const running = containers.filter((c) => c.state === "RUNNING").length;
+    const total = containers.length;
+
+    const lines: string[] = [`Docker containers: ${running} running / ${total} shown`,""];
+
+    for (const c of containers) {
+      const name = c.names[0]?.replace(/^\//, "") ?? "unknown";
+      const icon = c.state === "RUNNING" ? "▶" : "■";
+      lines.push(`  ${icon} ${name} | ${c.status} | ${c.image}`);
     }
 
     return { content: [{ type: "text", text: lines.join("\n") }] };

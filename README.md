@@ -19,6 +19,12 @@ Returns recent parity check history. Accepts an optional `limit` parameter (1–
 ### `get-notifications`
 Returns unread notification count summary (alerts, warnings, info) and a list of recent notifications. Accepts optional `type` (UNREAD or ARCHIVE, default UNREAD) and `limit` (1–50, default 10) parameters.
 
+### `get-system-info`
+Returns hostname, uptime, OS version, Unraid and kernel versions, CPU model and core/thread count, and total RAM with DIMM count.
+
+### `get-docker-containers`
+Returns all Docker containers with name, state, status string, and image. Accepts optional `runningOnly` boolean (default false) to filter to running containers only.
+
 ## Requirements
 
 - Unraid 7.x with API enabled
