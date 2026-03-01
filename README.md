@@ -25,6 +25,15 @@ Returns hostname, uptime, OS version, Unraid and kernel versions, CPU model and 
 ### `get-docker-containers`
 Returns all Docker containers with name, state, status string, and image. Accepts optional `runningOnly` boolean (default false) to filter to running containers only.
 
+### `get-shares`
+Returns Unraid user shares with name, comment, free space, and allocation settings (allocator, split level, include/exclude disk lists if configured).
+
+## Not Implemented
+
+**User accounts** — The Unraid GraphQL API exposes a `me` query that returns the current API key's identity, but no endpoint for listing local user accounts. Managing users is a rare task better handled in the Unraid web UI.
+
+**VMs** — No running VMs available to test against; skipped until there's something to validate the output.
+
 ## Requirements
 
 - Unraid 7.x with API enabled

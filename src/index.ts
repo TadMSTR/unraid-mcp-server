@@ -36,7 +36,7 @@ async function graphql(query: string): Promise<unknown> {
 
 const server = new McpServer({
   name: "unraid-mcp-server",
-  version: "0.3.0",
+  version: "0.4.0",
 });
 
 server.tool(
@@ -321,6 +321,41 @@ server.tool(
       const name = c.names[0]?.replace(/^\//, "") ?? "unknown";
       const icon = c.state === "RUNNING" ? "▶" : "■";
       lines.push(`  ${icon} ${name} | ${c.status} | ${c.image}`);
+    }
+
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+  }
+);
+
+server.tool(
+  "get-shares",
+  "Get Unraid user shares with name, comment, free space, and allocation settings.",
+  {},
+  async () => {
+    const data = (await graphql(`{
+      shares { name comment free allocator include exclude splitLevel }
+    }`)) as {
+      shares: {
+        name: string;
+        comment: string;
+        free: number;
+        allocator: string;
+        include: string[];
+        exclude: string[];
+        splitLevel: string;
+      }[];
+    };
+
+    const shares = data.shares;
+    const lines: string[] = [`Shares: ${shares.length} total`, ""];
+
+    for (const s of shares) {
+      const freeGiB = (s.free / 1024 ** 3).toFixed(1);
+      const comment = s.comment ? ` — ${s.comment}` : "";
+      lines.push(`  ${s.name}${comment}`);
+      lines.push(`    Free: ${freeGiB} GiB | Allocator: ${s.allocator}${s.splitLevel ? ` | Split: ${s.splitLevel}` : ""}`);
+      if (s.include.length) lines.push(`    Include: ${s.include.join(", ")}`);
+      if (s.exclude.length) lines.push(`    Exclude: ${s.exclude.join(", ")}`);
     }
 
     return { content: [{ type: "text", text: lines.join("\n") }] };
