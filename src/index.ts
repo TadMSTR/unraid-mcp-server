@@ -6,7 +6,6 @@ import https from "https";
 
 const UNRAID_URL = process.env.UNRAID_URL ?? "";
 const UNRAID_API_KEY = process.env.UNRAID_API_KEY ?? "";
-
 const tlsAgent = new https.Agent({ rejectUnauthorized: false });
 
 async function graphql(query: string): Promise<unknown> {
