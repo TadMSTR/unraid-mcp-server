@@ -8,14 +8,14 @@ const UNRAID_URL = process.env.UNRAID_URL ?? "";
 const UNRAID_API_KEY = process.env.UNRAID_API_KEY ?? "";
 const tlsAgent = new https.Agent({ rejectUnauthorized: false });
 
-async function graphql(query: string): Promise<unknown> {
+async function graphql(query: string, variables?: Record<string, unknown>): Promise<unknown> {
   const res = await fetch(`${UNRAID_URL}/graphql`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": UNRAID_API_KEY,
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, ...(variables ? { variables } : {}) }),
     // @ts-ignore - Node fetch accepts agent for self-signed certs
     agent: tlsAgent,
   });
@@ -207,14 +207,17 @@ server.tool(
     limit: z.number().min(1).max(50).default(10).describe("Number of notifications to return"),
   },
   async ({ type, limit }) => {
-    const data = (await graphql(`{
-      notifications {
-        overview { unread { alert warning info total } }
-        list(filter: { type: ${type}, offset: 0, limit: ${limit} }) {
-          title subject description importance formattedTimestamp
+    const data = (await graphql(
+      `query($type: NotificationType!, $limit: Int!) {
+        notifications {
+          overview { unread { alert warning info total } }
+          list(filter: { type: $type, offset: 0, limit: $limit }) {
+            title subject description importance formattedTimestamp
+          }
         }
-      }
-    }`)) as {
+      }`,
+      { type, limit }
+    )) as {
       notifications: {
         overview: { unread: { alert: number; warning: number; info: number; total: number } };
         list: { title: string; subject: string; description: string; importance: string; formattedTimestamp: string }[];
